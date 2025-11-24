@@ -2,6 +2,7 @@ package co.edu.uceva.programaservice.domain.services;
 
 import co.edu.uceva.programaservice.domain.repositories.IProgramaRepository;
 import org.springframework.data.domain.Page;
+import co.edu.uceva.programaservice.domain.model.Programa;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

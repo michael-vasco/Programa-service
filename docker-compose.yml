@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL compartida
+  postgres:
+    image: postgres:15
+    container_name: shared-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: curso_springboot
+      POSTGRES_USER: devdb
+      POSTGRES_PASSWORD: a1b2c3d4
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devdb -d curso_springboot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Servicio de Eureka
+  eureka-server:
+    image: springcloud/eureka:latest
+    container_name: eureka-server
+    restart: always
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Programa Service
+  programa-service:
+    build: .
+    container_name: programa-service
+    restart: always
+    ports:
+      - "8080:8080"
+      - "8083:8083"  # Puerto de Actuator
+    environment:
+      # Application
+      SPRING_APPLICATION_NAME: Programa-service
+      APP_VERSION: 0.7.0
+      APP_API_VERSION: v1
+
+      # Server
+      SERVER_PORT: 8080
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/curso_springboot
+      SPRING_DATASOURCE_USERNAME: devdb
+      SPRING_DATASOURCE_PASSWORD: a1b2c3d4
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+      # JPA/Hibernate
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      # Actuator
+      MANAGEMENT_SERVER_PORT: 8083
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+
+      # Circular References
+      SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
+
+      # HikariCP
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 50
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 600000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1800000
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 10
+      SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME: 300000
+      SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT: 5000
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TEST_QUERY: "SELECT 1"
+
+      # Logging
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: ERROR
+      LOGGING_LEVEL_WEB: INFO
+      LOGGING_LEVEL_ORG_HIBERNATE_SQL: DEBUG
+      LOGGING_LEVEL_ROOT: ERROR
+      LOGGING_LEVEL_COM_ZAXXER_HIKARI: ERROR
+      LOGGING_LEVEL_ORG_HIBERNATE: ERROR
+
+      # Eureka Client
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "true"
+      EUREKA_CLIENT_FETCH_REGISTRY: "true"
+      EUREKA_CLIENT_LEASE_RENEWAL_INTERVAL_IN_SECONDS: 5
+      EUREKA_CLIENT_LEASE_EXPIRATION_DURATION_IN_SECONDS: 90
+      EUREKA_CLIENT_RENEWAL_PERCENT_THRESHOLD: 0.85
+      EUREKA_CLIENT_ENABLE_SELF_PRESERVATION: "true"
+
+      # Java Options
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Volumen persistente para PostgreSQL
+volumes:
+  postgres_data:
+    driver: local
+
+# Red compartida para microservicios
+networks:
+  microservices-network:
+    driver: bridge

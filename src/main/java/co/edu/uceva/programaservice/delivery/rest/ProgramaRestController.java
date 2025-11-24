@@ -3,6 +3,7 @@ package co.edu.uceva.programaservice.delivery.rest;
 import co.edu.uceva.programaservice.domain.model.Programa;
 import co.edu.uceva.programaservice.domain.services.IProgramaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import co.edu.uceva.programaservice.domain.exception.*;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +38,7 @@ public class ProgramaRestController {
     public ResponseEntity<Map<String, Object>> getProgramas() {
         List<Programa> facultades = programaservice.findAll();
         if (facultades.isEmpty()) {
-            throw new NoHayProgramaException();
+            throw new NoHayProgramasException();
         }
         Map<String, Object> response = new HashMap<>();
         response.put(PROGRAMAS, facultades);
@@ -71,7 +72,7 @@ public class ProgramaRestController {
     @DeleteMapping("/programas")
     public ResponseEntity<Map<String, Object>> delete(@RequestBody Programa programa) {
         programaservice.findById(programa.getId())
-                .orElseThrow(() -> new ProgramaNoEncontradaException(programa.getId()));
+                .orElseThrow(() -> new ProgramaNoEncontradoException(programa.getId()));
         programaservice.delete(programa);
         Map<String, Object> response = new HashMap<>();
         response.put(MENSAJE, "El programa ha sido eliminada con éxito!");
@@ -85,7 +86,7 @@ public class ProgramaRestController {
             throw new ValidationException(result);
         }
         programaservice.findById(programa.getId())
-                .orElseThrow(() -> new ProgramaNoEncontradaException(programa.getId()));
+                .orElseThrow(() -> new ProgramaNoEncontradoException(programa.getId()));
         Map<String, Object> response = new HashMap<>();
         Programa programaActualizado = programaservice.update(programa);
         response.put(MENSAJE, "La programa ha sido actualizada con éxito!");
@@ -96,7 +97,7 @@ public class ProgramaRestController {
     @GetMapping("/programas/{id}")
     public ResponseEntity<Map<String, Object>> findById(@PathVariable Long id) {
         Programa programa = programaservice.findById(id)
-                .orElseThrow(() -> new ProgramaNoEncontradaException(id));
+                .orElseThrow(() -> new ProgramaNoEncontradoException(id));
         Map<String, Object> response = new HashMap<>();
         response.put(MENSAJE, "el programa ha sido encontrada con éxito!");
         response.put(PROGRAMA, programa);
